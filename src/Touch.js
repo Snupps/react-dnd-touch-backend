@@ -114,36 +114,40 @@ export class TouchBackend {
         this.handleTopMove = this.handleTopMove.bind(this);
         this.handleTopMoveEndCapture = this.handleTopMoveEndCapture.bind(this);
         this.handleCancelOnEscape = this.handleCancelOnEscape.bind(this);
+
         this.document = typeof document !== 'undefined' ? document : {}
+
+        // Polyfill for document.elementsFromPoint
+        this.elementsFromPoint = (this.document && this.document.elementsFromPoint || function (x, y) {
+            var elements = [],
+                previousPointerEvents = [],
+                current,
+                i,
+                d;
+
+            // get all elements via elementFromPoint, and remove them from hit-testing in order
+            while ((current = this.document.elementFromPoint(x, y)) && elements.indexOf(current) === -1 && current !== null) {
+
+                // push the element and its current style
+                elements.push(current);
+                previousPointerEvents.push({
+                    value: current.style.getPropertyValue('pointer-events'),
+                    priority: current.style.getPropertyPriority('pointer-events')
+                });
+
+                // add "pointer-events: none", to get to the underlying element
+                current.style.setProperty('pointer-events', 'none', 'important');
+            }
+
+            // restore the previous pointer-events values
+            for (i = previousPointerEvents.length; d = previousPointerEvents[--i];) {
+                elements[i].style.setProperty('pointer-events', d.value ? d.value : '', d.priority);
+            }
+
+            // return our results
+            return elements;
+        }).bind(this.document);
     }
-
-    // Polyfill for document.elementsFromPoint
-    elementsFromPoint = ( this.document.elementsFromPoint || function (x,y) {
-        var elements = [], previousPointerEvents = [], current, i, d;
-
-        // get all elements via elementFromPoint, and remove them from hit-testing in order
-        while ((current = this.document.elementFromPoint(x,y)) && elements.indexOf(current) === -1 && current !== null) {
-
-          // push the element and its current style
-            elements.push(current);
-            previousPointerEvents.push({
-              value: current.style.getPropertyValue('pointer-events'),
-              priority: current.style.getPropertyPriority('pointer-events')
-          });
-
-          // add "pointer-events: none", to get to the underlying element
-            current.style.setProperty('pointer-events', 'none', 'important');
-        }
-
-        // restore the previous pointer-events values
-        for(i = previousPointerEvents.length; d=previousPointerEvents[--i]; ) {
-            elements[i].style.setProperty('pointer-events', d.value ? d.value: '', d.priority);
-        }
-
-        // return our results
-        return elements;
-
-    })
 
     setup () {
         if (typeof window === 'undefined') {
